@@ -1,0 +1,6 @@
+duckdb>=0.9.0
+numpy>=1.24.0
+asyncio
+dataclasses
+pathlib
+typing-extensions>=4.0.0
