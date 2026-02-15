@@ -1,8 +1,10 @@
 # star-schema-llm-context
 
-**star-schema-llm-context** is a repo to both research and document patterns for using Kimball-style / star schema dimensional modeling as a way to abstract without breaking the lower level via a data/business logic/state persistence layer for LLM agent systems.
+**star-schema-llm-context** is a repo for both research and documentation of patterns for using Kimball-style / star schema dimensional modeling as a way to abstract without breaking the lower level via a data/business logic/state persistence layer for LLMs and agentic loops of LLMs (though I think it applies to other forms of transformer models as well - modality doesn't matter). Coming up with a real definition is tough right now, it's mostly a vibe I've had for years that keeps nipping at me. 
 
-The core insight: abstract the data, not the behavior. LLM frameworks that abstract interaction patterns (chains, agents, retrievers) break when research moves faster than the abstraction. Dimensional modeling abstracts what happened (facts) in what context (dimensions) -- patterns that are 30+ years old and model-agnostic.
+Something related to (Facebook's Large Concept Model)[https://github.com/facebookresearch/large_concept_model] paper and approach also reinforced it a bit - not the idea of semantic embeddings, but the idea of semantic abstractions.
+
+That said, here's where I've evolved on this toward over the years: abstract the data, not the behavior. LLM frameworks that abstract interaction patterns (chains, agents, retrievers) break when research moves faster than the abstraction. Dimensional modeling abstracts what happened (facts) in what context (dimensions) -- patterns that are 30+ years old and model-agnostic.
 
 This repo provides:
 - A reference implementation spec (how to structure a DuckDB star schema for agent state)
