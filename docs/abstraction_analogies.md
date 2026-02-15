@@ -2,7 +2,7 @@ last updated: 2026-02-14
 
 # abstraction analogies: selection under constraint
 
-## the unifying insight
+## common patterns
 
 Three repos converge on one observation: **the same DAG structure -- decompose, route, prune, synthesize, verify -- appears in database query planning, distributed search, sparse MoE transformers, Gemini Deep Think, and agent hierarchies**. The universal primitive is routing: given limited compute, which subset of the search space to activate.
 
@@ -16,7 +16,7 @@ This document is the canonical treatment of the analogy, synthesizing analysis f
 
 The initial analogy mapped tokens to bytecode and skills to Python bindings in a vertical compilation stack. This breaks because:
 
-- **Skills are data, not code.** A skill gets loaded into the context window (a mutable data structure). It doesn't get compiled. Model weights are the compiled binary -- they don't change per session.
+- **Skills are both data and business rules, not code.** A skill gets loaded into the context window (a mutable data structure). It doesn't get compiled. Model weights are the compiled binary -- they don't change per session.
 - **The context window is a temporary table**, not a program counter. It has a fixed capacity (`[1, seq_len, hidden_dim]`), and loading a skill is an `INSERT INTO context_buffer`.
 - **Attention is a query operation**, not instruction execution. QK^T computes similarity scores (join condition), softmax normalizes them (WHERE clause), and multiplication by V aggregates results.
 
@@ -228,12 +228,3 @@ The star schema is the persistent record of these selections. fact tables captur
 
 - Uses `generate_dimension_key()` for session tracking
 - Would import canonical key generation from this library
-
----
-
-## source attribution
-
-- Claude agent analysis: fb-claude-skills session af5bb1d (2026-02-14)
-- Gemini Deep Think analysis: internal/research/20260214-gemini-analysis-analogies.md
-- Data-centric agent state research: fb-claude-skills/docs/analysis/data_centric_agent_state_research.md
-- DuckDB dimensional model strategy: fb-claude-skills/docs/analysis/duckdb_dimensional_model_strategy.md

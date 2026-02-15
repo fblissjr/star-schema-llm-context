@@ -4,7 +4,7 @@ last updated: 2026-02-14
 
 ## vision
 
-A reusable Python library providing Kimball-style dimensional modeling primitives for LLM agent systems. Three repos converge on one insight: **the same DAG structure -- decompose, route, prune, synthesize, verify -- appears in database query planning, distributed search, sparse MoE transformers, and agent hierarchies**. The universal primitive is routing: given limited compute, which subset of the search space to activate.
+A reusable Python library providing star schema-style dimensional modeling primitives for LLM agent systems. Three repos converge on one common pattern: **the same DAG structure -- decompose, route, prune, synthesize, verify -- appears in database query planning, distributed search, sparse MoE transformers, and agent hierarchies**. The common primitive is routing: given limited compute, which subset of the search space to activate.
 
 This library is the storage engine layer. It handles I/O, schema management, key generation, and connection lifecycle. It does not know business logic -- that lives in consumer repos that import and extend it.
 
@@ -12,12 +12,7 @@ This library is the storage engine layer. It handles I/O, schema management, key
 
 ### the gap in the ecosystem
 
-Comprehensive research (see `docs/abstraction_analogies.md`) found that **no existing project uses DuckDB as a persistent state store for LLM agent operations**. The landscape has:
-
-- **Vector DBs** (Pinecone, Chroma, Qdrant): semantic search over embeddings. No relational queries, no temporal tracking, no star schema.
-- **Conversation memory** (MemGPT/Letta, Zep, Mem0): stores chat history and summaries. Complementary to operational data but different use case.
-- **Observability platforms** (LangSmith, Braintrust, Phoenix/Arize): SaaS, cloud-first, no local-first option. Expensive at scale.
-- **OpenTelemetry GenAI**: spans and traces. Good for observability, not for dimensional analysis.
+Using a star schema modeling approach with DuckDB as a persistent state store for LLM agent operations**
 
 DuckDB fills a specific gap: **local-first, analytical, columnar, embedded, zero-dependency OLAP** that runs in the same process as the agent. No network hop, no auth, no cloud dependency.
 
