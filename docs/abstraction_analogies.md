@@ -203,16 +203,15 @@ The star schema is the persistent record of these selections. fact tables captur
 
 ### star-schema-llm-context (this repo)
 
-**Current state**: prototype with flat schema, requirements.txt, raw SQL.
+**Current state**: pattern library with design docs. Dead prototype code deleted. pyproject.toml with uv.
 
 **Target state** (future sessions):
-- Python package with `src/star_schema/`
-- uv-based build system
+- Python package with `src/star_schema/` (extract after 2+ working consumers)
 - Core primitives extracted from fb-claude-skills store.py
 - Common dimensions and fact patterns
 - Tests
 
-### fb-claude-skills (v0.6.0, completed)
+### fb-claude-skills (v0.7.0, completed)
 
 - Kimball dimensional model in `store.py`
 - Hash-based surrogate keys (`_hash_key()`, `_hash_diff()`)
@@ -222,6 +221,7 @@ The star schema is the persistent record of these selections. fact tables captur
 - Meta tables (schema versioning, load logging)
 - Merged session model (boundaries as events)
 - 10 consumer scripts updated and verified
+- `dimensional-modeling` skill (teaches agents to design their own schemas)
 - Full schema documentation in `docs/internals/duckdb_schema.md`
 
 ### ccutils

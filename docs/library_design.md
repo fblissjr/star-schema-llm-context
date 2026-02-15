@@ -408,6 +408,8 @@ fact_verification        -- tracks quality checks
 
 **Capture mechanism**: Claude Code hooks (PostToolUse, SubagentStart, SubagentStop, Stop, TaskCompleted). Journal.py pattern: JSONL buffer -> batch ingest into DuckDB. Already implemented in fb-claude-skills v0.5.0.
 
+**Write-back**: Because dimensions are mutable (SCD Type 2), you can fix routing problems by modifying the data, not the code. Update a skill description in dim_skill, change a source URL in dim_source, deprecate a tool in dim_agent_node -- the agent picks up the change on next read without a redeploy. The schema is the stable layer; behavior changes by changing what's in it.
+
 ### secondary: patterns that enable automation
 
 Multiple patterns focused on what enables automating the next level of abstraction:

@@ -6,6 +6,8 @@ Something related to (Facebook's Large Concept Model)[https://github.com/faceboo
 
 That said, here's where I've evolved on this toward over the years: abstract the data, not the behavior. LLM frameworks that abstract interaction patterns (chains, agents, retrievers) break when research moves faster than the abstraction. Dimensional modeling abstracts what happened (facts) in what context (dimensions) -- patterns that are 30+ years old and model-agnostic.
 
+Current thinking is that business rules stored inside dims make it easy to represent business rules and relationships. A source URL in dim_source is a monitoring rule. SCD Type 2 versions these rules over time. When every consumer generates keys the same way, handles change detection the same way, and writes metadata the same way, the transformation patterns become consistent enough to build on top of. Consistent transformation of data-as-rules is what makes it possible to abstract upward without breaking what's below.
+
 This repo provides:
 - A reference implementation spec (how to structure a DuckDB star schema for agent state)
 - Conceptual framework (the database analogy for skills, attention, and context management)
