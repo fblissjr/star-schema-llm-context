@@ -1,0 +1,11 @@
+[project]
+name = "star-schema-llm-context"
+version = "0.1.0"
+description = "Kimball-style dimensional modeling patterns for LLM agent systems"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

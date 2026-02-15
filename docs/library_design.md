@@ -391,107 +391,40 @@ Fact tables are append-only event logs. Their grain is the composite of dimensio
 
 ## expansion roadmap (v3+)
 
-Three architectural expansions that move the system from "smart storage" to a "self-optimizing organism." These build on the existing star schema foundation and are informed by cross-analysis with Gemini Deep Think (source: `fb-claude-skills/internal/research/20260214-gemini-feedback.md`).
+### primary: DAG execution model
 
-### expansion 1: runtime layer (observability / self-optimization)
+Track agent execution as a data pipeline DAG. Agents ARE data pipelines. A Claude Code session executing a complex task IS a DAG: goal decomposes to tasks, tasks route to subagents, subagents execute tool chains, tool chains produce outputs that get synthesized.
 
-**Current state**: tracks skill definitions (what the agent knows). **Gap**: doesn't track execution (what the agent does).
-
-`fact_tool_call` (already designed in the DAG hierarchy section above) is the foundation. It's the **EXPLAIN ANALYZE output** for agent execution. Without it, you can measure wall-clock time but can't identify which routing decision was expensive.
-
-Additional schema:
+The five invariant operations aren't just a communication framework here -- they're literally the fact table grain:
 
 ```sql
--- Cost-aware routing: token usage per session
-CREATE TABLE IF NOT EXISTS fact_token_usage (
-    session_id       TEXT NOT NULL,
-    measured_at      TIMESTAMP NOT NULL DEFAULT current_timestamp,
-    input_tokens     INTEGER,
-    output_tokens    INTEGER,
-    cache_read_tokens INTEGER,
-    cache_write_tokens INTEGER,
-    model            TEXT,
-    cost_usd         REAL,
-    inserted_at      TIMESTAMP NOT NULL DEFAULT current_timestamp,
-    record_source    TEXT NOT NULL
-);
+fact_task_decomposition  -- tracks decompose phase (goal -> tasks, what was decomposed and how)
+fact_routing_decision    -- tracks route phase (task -> agent/tool, what was routed where)
+fact_execution_step      -- tracks individual stage execution (atomic: tool call with timing, tokens, status)
+fact_pruning_event       -- tracks what was killed/abandoned
+fact_synthesis_result    -- tracks merge/synthesis (merged output with quality signal)
+fact_verification        -- tracks quality checks
 ```
 
-**Capability unlocked**: cost-aware routing. An agent can query its own history: "My top 5 most expensive tools by token count are X. I should switch from `read_file` (full scan) to `grep` (index scan) to respect the token constraint." This is the agent equivalent of a database query optimizer learning from past execution plans.
+**What it enables**: Not "how much did it cost" but "what routing decisions did the agent make, and which patterns succeed?"
+- "This decomposition pattern succeeds 80% of the time; that one fails 60%"
+- "When the agent spawns >3 subagents, synthesis quality drops -- prune earlier"
+- "Read-first-then-write routing outperforms write-then-fix by 2x in tool calls"
 
-**Capture mechanism**: Claude Code hooks write JSONL events -> `journal.py` batch-ingests into DuckDB. Already implemented in fb-claude-skills v0.5.0.
+**Capture mechanism**: Claude Code hooks (PostToolUse, SubagentStart, SubagentStop, Stop, TaskCompleted). Journal.py pattern: JSONL buffer -> batch ingest into DuckDB. Already implemented in fb-claude-skills v0.5.0.
 
-### expansion 2: semantic layer (hybrid search / fuzzy routing)
+### secondary: patterns that enable automation
 
-**Current state**: routing is sparse/exact (MD5 hash matching). If the agent searches for "dataframe help" but the skill is named `pandas_guide`, the hash join fails.
+Multiple patterns focused on what enables automating the next level of abstraction:
 
-**Gap**: no fuzzy/semantic routing. Need to complement exact matching with vector similarity.
+- **Consistency metrics**: Track how consistently an agent follows patterns across sessions. Consistent behavior is automatable; inconsistent behavior isn't.
+- **Pattern extraction**: Identify recurring tool call sequences that could become skills. "You do this 5-step sequence in every code review -- make it a skill."
+- **Abstraction readiness scoring**: Given a pattern's consistency, frequency, and success rate, score whether it's ready to be automated as a skill. This is the bridge from "interesting data" to "automated behavior."
 
-```sql
--- Embedding dimension for fuzzy skill routing
-CREATE TABLE IF NOT EXISTS dim_skill_embedding (
-    skill_key        TEXT NOT NULL,       -- references dim_skill.hash_key
-    model_version    TEXT NOT NULL,       -- e.g. 'text-embedding-3-small'
-    embedding        FLOAT[1536],        -- vector representation
-    content_summary  TEXT,               -- the text chunk that was embedded
-    effective_from   TIMESTAMP NOT NULL DEFAULT current_timestamp,
-    effective_to     TIMESTAMP,
-    is_current       BOOLEAN NOT NULL DEFAULT TRUE,
-    record_source    TEXT NOT NULL
-);
-```
+The key insight: just like models went from needing 10+ few-shot examples to zero-shot as they internalized patterns, agent workflows go from manual sequences to automated skills as the patterns become consistent enough to codify.
 
-**Capability unlocked**: hybrid search (SQL filter + vector rank). Filter dimensions with structured predicates (`WHERE auto_update = TRUE`), then rank by `array_cosine_similarity(embedding, $query_vec)`. DuckDB's `vss` extension makes this feasible without adding another database.
+### what's NOT in the roadmap (and why)
 
-**Design note**: this is complementary to the existing hash-based routing. Exact matching handles known entities; vector search handles discovery of unknown but relevant entities. The two compose: filter first (cheap), rank second (expensive).
-
-### expansion 3: graph layer (dependency DAG / impact analysis)
-
-**Current state**: `skill_source_dep` maps sources to skills (flat routing table). **Gap**: no recursive dependency tracking between skills.
-
-Skills depend on other skills (mlx-lm references mlx, dimensional-modeling would reference star-schema-llm-context). When a breaking change is detected in a leaf skill, the impact propagates up the DAG.
-
-```sql
--- Recursive skill dependency graph
-CREATE TABLE IF NOT EXISTS dim_skill_dependency (
-    parent_skill_key TEXT NOT NULL,       -- the importer
-    child_skill_key  TEXT NOT NULL,       -- the imported
-    dependency_type  TEXT NOT NULL,       -- 'imports', 'calls', 'extends', 'references'
-    is_critical      BOOLEAN DEFAULT TRUE, -- if child breaks, does parent break?
-    effective_from   TIMESTAMP NOT NULL DEFAULT current_timestamp,
-    effective_to     TIMESTAMP,
-    is_current       BOOLEAN NOT NULL DEFAULT TRUE,
-    record_source    TEXT NOT NULL
-);
-```
-
-**Capability unlocked**: impact analysis via recursive CTEs. When `fact_change` detects a breaking change in `logging_utils`, query the dependency graph:
-
-```sql
-WITH RECURSIVE impact AS (
-    SELECT child_skill_key AS skill_key, 1 AS depth
-    FROM dim_skill_dependency
-    WHERE child_skill_key = ? AND is_current = TRUE AND is_critical = TRUE
-    UNION ALL
-    SELECT d.parent_skill_key, i.depth + 1
-    FROM dim_skill_dependency d
-    JOIN impact i ON d.child_skill_key = i.skill_key
-    WHERE d.is_current = TRUE AND d.is_critical = TRUE
-)
-SELECT DISTINCT s.skill_name, i.depth
-FROM impact i
-JOIN dim_skill s ON s.hash_key = i.skill_key AND s.is_current = TRUE
-ORDER BY i.depth;
-```
-
-This is the "exploded view diagram" -- knowing that removing the alternator kills the battery.
-
-### expansion summary
-
-| Layer | Current (v2) | Expanded (v3+) | Capability Gained |
-|-------|-------------|----------------|-------------------|
-| Runtime | Static definitions | Execution logs (`fact_tool_call`, `fact_token_usage`) | Self-optimization (cost/speed awareness) |
-| Semantic | Exact hash matching | Vector embeddings (`dim_skill_embedding`) | Fuzzy routing (finding unknown-but-relevant tools) |
-| Graph | Flat source-skill map | Recursive dependency DAG (`dim_skill_dependency`) | Impact analysis (predicting cascading breakage) |
-
-The progression: fact tables are sensory inputs, dimension tables are the entity model, views are reflexes. `fact_tool_call` adds proprioception (the system observing its own execution). Embeddings add intuition (finding things by meaning). The dependency graph adds foresight (predicting consequences).
+- **Embeddings / vector search**: Not ready until multivector retrieval is built into the harness/LLM. Adding it now creates a premature dependency on unstable embedding infrastructure.
+- **Full graph database**: Overcomplicated for 99% of use cases. Recursive CTEs in DuckDB handle the dependency DAG use case without adding another database.
+- **Knowledge graph code analysis**: The old star-schema-llm-context prototype. Deleted. Language servers and tree-sitter do this better.
