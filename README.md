@@ -63,15 +63,15 @@ meta_schema_version (schema evolution tracking) and meta_load_log (operational v
 
 ## working proof
 
-[fb-claude-skills/skill-maintainer/scripts/store.py](https://github.com/fblissjr/fb-claude-skills/blob/main/skill-maintainer/scripts/store.py) implements the full Kimball schema (v0.6.0):
+[fb-claude-skills/skill-maintainer/scripts/store.py](https://github.com/fblissjr/fb-claude-skills/blob/main/skill-maintainer/scripts/store.py) implements an attempt at a full star schema:
 
 - 3 dimension tables (dim_source, dim_skill, dim_page) with SCD Type 2
 - 6 fact tables (watermark checks, changes, validations, update attempts, content measurements, session events)
 - Pre-built analytical views (freshness, budgets, trends)
-- Automatic schema migration (v1 -> v2)
+- Automatic schema migration (v1 -> v2 -> etc)
 - Backward-compatible state.json export
 
-## use cases
+## current research areas and use cases
 
 ### primary: agent task decomposition DAG
 
