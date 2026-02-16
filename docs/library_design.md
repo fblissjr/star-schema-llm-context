@@ -410,6 +410,14 @@ fact_verification        -- tracks quality checks
 
 **Write-back**: Because dimensions are mutable (SCD Type 2), you can fix routing problems by modifying the data, not the code. Update a skill description in dim_skill, change a source URL in dim_source, deprecate a tool in dim_agent_node -- the agent picks up the change on next read without a redeploy. The schema is the stable layer; behavior changes by changing what's in it.
 
+### data-driven flywheel
+
+The [AI engineering data flywheel](https://www.sh-reya.com/blog/ai-engineering-flywheel/) describes the process of continuously improving data through evaluation, monitoring, and human/synthetic feedback. The star schema is what makes that flywheel output actionable.
+
+Concretely: fact tables capture routing decisions and their outcomes. Developers (or automated evaluators) label those outcomes -- helpful/not helpful, correct/incorrect, efficient/wasteful. Those labels flow back into the dimensions as updated business rules. The agent reads the updated dimensions on the next run and routes differently. Over time, the data improves without writing custom workflow code for each new behavior.
+
+This is the connection between the DAG execution model (what happened) and write-back (fixing routing by updating data). The flywheel closes the loop: observe -> label -> update rules -> observe better outcomes -> label again.
+
 ### secondary: patterns that enable automation
 
 Multiple patterns focused on what enables automating the next level of abstraction:
